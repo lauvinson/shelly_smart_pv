@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - master
+      - shelly-pv-platform-implementation-10461277573206763845
 
 permissions:
   contents: write
