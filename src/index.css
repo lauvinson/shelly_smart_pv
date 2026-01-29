@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background-light text-text-main font-display antialiased min-h-screen flex flex-col;
+  }
+}
+
+/* Custom scrollbar for clean UI */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Flow Animation for Dashboard */
+@keyframes flow {
+  to { stroke-dashoffset: -20; }
+}
+.flow-animation {
+  stroke-dasharray: 6 4;
+  animation: flow 1s linear infinite;
+}
+.flow-fast { animation-duration: 0.5s; }
+.flow-normal { animation-duration: 1.5s; }
+.flow-slow { animation-duration: 3s; }
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.toggle-checkbox:checked {
+    right: 0;
+    border-color: #f26c0d;
+}
+.toggle-checkbox:checked + .toggle-label {
+    background-color: #f26c0d;
+}
