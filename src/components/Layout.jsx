@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { Modal } from './Modal';
+import { AddDeviceForm } from './AddDeviceForm';
 
 const NavItem = ({ to, children }) => (
   <NavLink
@@ -15,6 +17,8 @@ const NavItem = ({ to, children }) => (
 );
 
 export const Layout = () => {
+  const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false);
+
   return (
     <div className="bg-background-light dark:bg-background-dark text-text-main font-display antialiased min-h-screen flex flex-col">
       {/* Header */}
@@ -37,7 +41,10 @@ export const Layout = () => {
           </nav>
 
           <div className="flex items-center gap-4">
-            <button className="hidden sm:flex items-center justify-center gap-2 h-9 px-4 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm shadow-orange-200">
+            <button
+              onClick={() => setIsAddDeviceOpen(true)}
+              className="hidden sm:flex items-center justify-center gap-2 h-9 px-4 bg-primary hover:bg-primary-hover text-white rounded-lg text-sm font-bold transition-colors shadow-sm shadow-orange-200"
+            >
               <span className="material-symbols-outlined text-[20px]">add</span>
               <span>Add Device</span>
             </button>
@@ -57,6 +64,11 @@ export const Layout = () => {
       <main className="flex-1 w-full max-w-[1600px] mx-auto px-6 py-8">
         <Outlet />
       </main>
+
+      {/* Add Device Modal */}
+      <Modal isOpen={isAddDeviceOpen} onClose={() => setIsAddDeviceOpen(false)} title="Add New Device">
+         <AddDeviceForm onClose={() => setIsAddDeviceOpen(false)} />
+      </Modal>
     </div>
   );
 };

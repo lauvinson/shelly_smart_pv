@@ -11,6 +11,14 @@ export const useShelly = () => {
 };
 
 export const ShellyProvider = ({ children }) => {
+  // Connection States for Simulation
+  const [connections, setConnections] = useState({
+    pv: true,
+    grid: true,
+    home: true,
+    battery: true
+  });
+
   // Mock Data State
   const [systemStatus, setSystemStatus] = useState({
     pvPower: 5.2, // kW
@@ -49,24 +57,36 @@ export const ShellyProvider = ({ children }) => {
   useEffect(() => {
     const interval = setInterval(() => {
       setSystemStatus(prev => {
-        const fluctuation = Math.random() * 0.1 - 0.05;
-        const newPv = Math.max(0, +(prev.pvPower + fluctuation).toFixed(2));
-        const newHome = Math.max(0.5, +(prev.homeConsumption + (Math.random() * 0.05 - 0.025)).toFixed(2));
-        // Grid = Home - PV (Simplified)
-        // If PV > Home, Grid is negative (Export)
-        // If PV < Home, Grid is positive (Import)
-        const newGrid = +(newHome - newPv).toFixed(2);
+        // PV Generation
+        let fluctuation = Math.random() * 0.1 - 0.05;
+        let basePv = connections.pv ? Math.max(0, prev.pvPower + fluctuation) : 0;
+
+        // Home Consumption
+        let baseHome = connections.home ? Math.max(0.5, prev.homeConsumption + (Math.random() * 0.05 - 0.025)) : 0;
+
+        // Grid Calculation
+        // Grid = Home - PV
+        // If Grid is disconnected, it cannot Import or Export.
+        // In a real scenario, if PV > Home and Grid is off, PV must curtail or charge battery.
+        // Here we simplify: if Grid off, we assume system islanding or curtailment.
+
+        let calculatedGrid = baseHome - basePv;
+
+        if (!connections.grid) {
+            calculatedGrid = 0;
+            // If Grid is off and PV < Home, we drain battery? (Mock logic)
+        }
 
         return {
           ...prev,
-          pvPower: newPv,
-          homeConsumption: newHome,
-          gridPower: newGrid,
+          pvPower: +basePv.toFixed(2),
+          homeConsumption: +baseHome.toFixed(2),
+          gridPower: +calculatedGrid.toFixed(2),
         };
       });
     }, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [connections]);
 
   const toggleScript = (id) => {
     setScripts(prev => prev.map(s =>
@@ -78,8 +98,26 @@ export const ShellyProvider = ({ children }) => {
     setAlarms(prev => prev.filter(a => a.id !== id));
   };
 
+  const toggleConnection = (key) => {
+      setConnections(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const addDevice = (device) => {
+      setDevices(prev => [...prev, { ...device, id: `dev-${Date.now()}`, status: 'Offline', power: 0 }]);
+  };
+
   return (
-    <ShellyContext.Provider value={{ systemStatus, devices, alarms, scripts, toggleScript, acknowledgeAlarm }}>
+    <ShellyContext.Provider value={{
+        systemStatus,
+        connections,
+        toggleConnection,
+        devices,
+        addDevice,
+        alarms,
+        scripts,
+        toggleScript,
+        acknowledgeAlarm
+    }}>
       {children}
     </ShellyContext.Provider>
   );

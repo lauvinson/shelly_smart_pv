@@ -1,9 +1,10 @@
 import React from 'react';
 import { useShelly } from '../context/ShellyContext';
 import { Card } from '../components/Card';
+import { clsx } from 'clsx';
 
 export const Dashboard = () => {
-  const { systemStatus } = useShelly();
+  const { systemStatus, connections, toggleConnection } = useShelly();
 
   return (
     <div className="flex flex-col gap-6">
@@ -77,7 +78,7 @@ export const Dashboard = () => {
           </div>
           <div className="flex items-center gap-1 text-primary text-sm font-medium mt-auto z-10">
              <span className="material-symbols-outlined text-lg">arrow_outward</span>
-             <span>{systemStatus.gridPower < 0 ? 'Exporting' : 'Importing'}</span>
+             <span>{systemStatus.gridPower < 0 ? 'Exporting' : (systemStatus.gridPower === 0 ? 'Islanded' : 'Importing')}</span>
           </div>
         </Card>
       </div>
@@ -103,23 +104,43 @@ export const Dashboard = () => {
 
                 <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
                     {/* PV to Inverter */}
-                    <path className="flow-animation flow-fast" d="M15% 50% L 50% 50%" fill="none" stroke="#f26c0d" strokeWidth="3" />
-                    <path d="M15% 50% L 50% 50%" fill="none" stroke="#f26c0d" strokeOpacity="0.2" strokeWidth="1" />
+                    <path className={clsx("flow-animation flow-fast", !connections.pv && "opacity-20")} d="M15% 50% L 50% 50%" fill="none" stroke="#f26c0d" strokeWidth="3" />
 
-                    {/* Inverter to Grid (Curve) - if exporting */}
-                    <path className="flow-animation flow-slow" d="M50% 50% Q 85% 50% 85% 20%" fill="none" stroke="#3b82f6" strokeWidth="3" opacity={systemStatus.gridPower < 0 ? 1 : 0.2} />
+                    {/* Inverter to Grid (Curve) */}
+                    <path className={clsx("flow-animation flow-slow", (!connections.grid || !connections.pv) && "opacity-20")} d="M50% 50% Q 85% 50% 85% 20%" fill="none" stroke="#3b82f6" strokeWidth="3" />
 
                     {/* Inverter to Home (Curve) */}
-                    <path className="flow-animation flow-normal" d="M50% 50% Q 85% 50% 85% 80%" fill="none" stroke="#4caf50" strokeWidth="3" />
+                    <path className={clsx("flow-animation flow-normal", !connections.home && "opacity-20")} d="M50% 50% Q 85% 50% 85% 80%" fill="none" stroke="#4caf50" strokeWidth="3" />
 
                     {/* Inverter to Battery (Straight Down) */}
-                    <path className="flow-animation flow-slow" d="M50% 50% L 50% 85%" fill="none" stroke="#4caf50" strokeWidth="3" />
+                    <path className={clsx("flow-animation flow-slow", !connections.battery && "opacity-20")} d="M50% 50% L 50% 85%" fill="none" stroke="#4caf50" strokeWidth="3" />
                 </svg>
+
+                {/* Simulation Toggles on Lines */}
+                {/* PV Line Toggle */}
+                <div className="absolute left-[32.5%] top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 cursor-pointer group" onClick={() => toggleConnection('pv')}>
+                    <div className={clsx("w-8 h-4 rounded-full relative transition-colors shadow-md border border-white", connections.pv ? "bg-green-500" : "bg-gray-300")}>
+                        <div className={clsx("absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-sm transition-all", connections.pv ? "right-0.5" : "left-0.5")}></div>
+                    </div>
+                     <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap pointer-events-none">
+                        Simulate PV Cut
+                    </div>
+                </div>
+
+                {/* Grid Line Toggle */}
+                <div className="absolute left-[70%] top-[30%] -translate-x-1/2 -translate-y-1/2 z-30 cursor-pointer group" onClick={() => toggleConnection('grid')}>
+                    <div className={clsx("w-8 h-4 rounded-full relative transition-colors shadow-md border border-white", connections.grid ? "bg-green-500" : "bg-gray-300")}>
+                        <div className={clsx("absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-sm transition-all", connections.grid ? "right-0.5" : "left-0.5")}></div>
+                    </div>
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-800 text-white text-[10px] py-1 px-2 rounded whitespace-nowrap pointer-events-none">
+                        Simulate Grid Loss
+                    </div>
+                </div>
 
                 {/* Nodes */}
                 {/* PV Node */}
                 <div className="absolute left-[15%] top-[50%] -translate-x-1/2 -translate-y-1/2 z-20">
-                     <div className="glass-panel w-24 h-24 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 hover:shadow-xl hover:border-primary/30">
+                     <div className={clsx("glass-panel w-24 h-24 rounded-2xl flex flex-col items-center justify-center transition-all border-transparent", !connections.pv && "opacity-50 grayscale")}>
                         <span className="material-symbols-outlined text-3xl text-primary mb-2">solar_power</span>
                         <span className="font-bold text-xs text-gray-800">PV Array</span>
                         <span className="text-[10px] text-gray-500 font-mono mt-1">{systemStatus.pvPower} kW</span>
@@ -128,17 +149,17 @@ export const Dashboard = () => {
 
                 {/* Inverter Node (Center) */}
                 <div className="absolute left-[50%] top-[50%] -translate-x-1/2 -translate-y-1/2 z-20">
-                    <div className="glass-panel w-32 h-32 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 hover:shadow-xl hover:border-gray-300 relative">
-                        <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                    <div className="glass-panel w-32 h-32 rounded-2xl flex flex-col items-center justify-center transition-all hover:scale-105 hover:shadow-xl hover:border-gray-300 relative">
+                        <div className={clsx("absolute top-2 right-2 w-2 h-2 rounded-full animate-pulse", connections.pv ? "bg-green-500" : "bg-red-500")}></div>
                         <span className="material-symbols-outlined text-5xl text-gray-700 mb-1">electric_meter</span>
                         <span className="font-bold text-xs text-gray-800">Inverter</span>
-                        <span className="text-[10px] text-eco-green font-medium">Active</span>
+                        <span className="text-[10px] text-eco-green font-medium">{connections.pv ? 'Active' : 'Standby'}</span>
                     </div>
                 </div>
 
                 {/* Grid Node */}
                 <div className="absolute left-[85%] top-[20%] -translate-x-1/2 -translate-y-1/2 z-20">
-                    <div className="glass-panel w-24 h-24 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 hover:shadow-xl hover:border-electric-blue border-transparent">
+                    <div className={clsx("glass-panel w-24 h-24 rounded-2xl flex flex-col items-center justify-center transition-all border-transparent", !connections.grid && "opacity-50 grayscale")}>
                         <span className="material-symbols-outlined text-3xl text-electric-blue mb-1">grid_4x4</span>
                         <span className="font-bold text-xs text-gray-800">Grid</span>
                         <span className="text-[10px] text-primary font-bold font-mono">{Math.abs(systemStatus.gridPower)} kW {systemStatus.gridPower < 0 ? 'Exp' : 'Imp'}</span>
@@ -147,7 +168,7 @@ export const Dashboard = () => {
 
                 {/* Home Node */}
                 <div className="absolute left-[85%] top-[80%] -translate-x-1/2 -translate-y-1/2 z-20">
-                    <div className="glass-panel w-24 h-24 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 hover:shadow-xl hover:border-eco-green border-transparent">
+                    <div className="glass-panel w-24 h-24 rounded-2xl flex flex-col items-center justify-center transition-all hover:scale-105 hover:shadow-xl hover:border-eco-green border-transparent">
                          <span className="material-symbols-outlined text-3xl text-eco-green mb-1">home</span>
                          <span className="font-bold text-xs text-gray-800">Home</span>
                          <span className="text-[10px] text-gray-500 font-mono">{systemStatus.homeConsumption} kW</span>
@@ -156,7 +177,7 @@ export const Dashboard = () => {
 
                 {/* Battery Node */}
                 <div className="absolute left-[50%] top-[85%] -translate-x-1/2 -translate-y-1/2 z-20">
-                    <div className="glass-panel w-24 h-24 rounded-2xl flex flex-col items-center justify-center cursor-pointer transition-all hover:scale-105 hover:shadow-xl hover:border-eco-green border-transparent relative">
+                    <div className="glass-panel w-24 h-24 rounded-2xl flex flex-col items-center justify-center transition-all hover:scale-105 hover:shadow-xl hover:border-eco-green border-transparent relative">
                          <div className="absolute -right-2 top-0 bg-eco-green text-white text-[9px] px-1.5 py-0.5 rounded-full shadow-sm">{systemStatus.battery.soc}%</div>
                          <span className="material-symbols-outlined text-3xl text-eco-green mb-1">battery_charging_full</span>
                          <span className="font-bold text-xs text-gray-800">Battery</span>

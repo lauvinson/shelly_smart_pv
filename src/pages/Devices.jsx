@@ -1,16 +1,86 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useShelly } from '../context/ShellyContext';
 import { Card } from '../components/Card';
 import { StatusBadge } from '../components/StatusBadge';
 
 export const Devices = () => {
   const { devices, alarms } = useShelly();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('All');
+  const [filterType, setFilterType] = useState('All');
+
+  // Extract unique types for the filter dropdown
+  const deviceTypes = ['All', ...new Set(devices.map(d => d.type))];
+  const statusOptions = ['All', 'Online', 'Offline', 'Warning'];
+
+  const filteredDevices = devices.filter(device => {
+    const matchesSearch = device.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          device.ip.includes(searchQuery);
+    const matchesStatus = filterStatus === 'All' || device.status === filterStatus;
+    const matchesType = filterType === 'All' || device.type === filterType;
+    return matchesSearch && matchesStatus && matchesType;
+  });
 
   return (
     <div className="flex flex-col gap-6">
-       <div className="flex flex-col gap-1 mb-2">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Device Assets & Health</h2>
-            <p className="text-gray-500 text-sm">Monitor infrastructure status, active alarms, and network topology.</p>
+       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+           <div className="flex flex-col gap-1">
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Device Assets & Health</h2>
+                <p className="text-gray-500 text-sm">Monitor infrastructure status, active alarms, and network topology.</p>
+           </div>
+           {/* Search Bar */}
+           <div className="w-full md:w-auto min-w-[300px]">
+                <div className="relative group">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <span className="material-symbols-outlined">search</span>
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Search device name, model, or IP..."
+                        className="block w-full pl-10 pr-3 py-2.5 bg-white dark:bg-[#2a1d15] border border-gray-200 dark:border-gray-700 rounded-xl leading-5 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary sm:text-sm shadow-sm transition-all"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                </div>
+           </div>
+       </div>
+
+       {/* Filters */}
+       <div className="flex flex-wrap gap-3 items-center">
+            <span className="text-sm font-medium text-gray-500 mr-2">Filters:</span>
+
+            <div className="relative">
+                <select
+                    className="flex h-9 items-center gap-2 pl-3 pr-8 rounded-lg bg-white dark:bg-[#2a1d15] border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-900 dark:text-white hover:border-primary/50 cursor-pointer focus:ring-primary focus:border-primary appearance-none shadow-sm"
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                >
+                    {deviceTypes.map(type => (
+                        <option key={type} value={type}>{type === 'All' ? 'Device Type: All' : type}</option>
+                    ))}
+                </select>
+                <span className="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-gray-400 text-[20px]">expand_more</span>
+            </div>
+
+            <div className="relative">
+                <select
+                    className="flex h-9 items-center gap-2 pl-3 pr-8 rounded-lg bg-white dark:bg-[#2a1d15] border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-900 dark:text-white hover:border-primary/50 cursor-pointer focus:ring-primary focus:border-primary appearance-none shadow-sm"
+                    value={filterStatus}
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                >
+                    {statusOptions.map(status => (
+                        <option key={status} value={status}>{status === 'All' ? 'Status: All' : status}</option>
+                    ))}
+                </select>
+                <span className="material-symbols-outlined absolute right-2 top-1.5 pointer-events-none text-gray-400 text-[20px]">expand_more</span>
+            </div>
+
+            <button
+                className="ml-auto text-sm font-medium text-primary hover:text-orange-700"
+                onClick={() => { setSearchQuery(''); setFilterStatus('All'); setFilterType('All'); }}
+            >
+                Clear all
+            </button>
        </div>
 
        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
@@ -35,10 +105,11 @@ export const Devices = () => {
                            </tr>
                        </thead>
                        <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                           {devices.map(device => (
-                               <tr key={device.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                                   <td className="px-6 py-4">
-                                       <div className="flex items-center gap-3">
+                           {filteredDevices.length > 0 ? (
+                               filteredDevices.map(device => (
+                                   <tr key={device.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                                       <td className="px-6 py-4">
+                                           <div className="flex items-center gap-3">
                                             <div className="bg-primary/10 text-primary p-2 rounded-lg">
                                                 <span className="material-symbols-outlined text-[20px]">bolt</span>
                                             </div>
@@ -56,13 +127,20 @@ export const Devices = () => {
                                        <div className="text-sm font-medium text-gray-900 dark:text-white">{device.power !== undefined ? `${device.power} kW` : (device.temp ? `${device.temp}°C` : 'N/A')}</div>
                                        <div className="text-xs text-gray-500">{device.voltage ? `${device.voltage} V` : (device.battery ? `Bat: ${device.battery}%` : '')}</div>
                                    </td>
-                                   <td className="px-6 py-4 text-right">
-                                       <button className="text-gray-400 hover:text-primary transition-colors">
-                                           <span className="material-symbols-outlined">more_vert</span>
-                                       </button>
+                                       <td className="px-6 py-4 text-right">
+                                           <button className="text-gray-400 hover:text-primary transition-colors">
+                                               <span className="material-symbols-outlined">more_vert</span>
+                                           </button>
+                                       </td>
+                                   </tr>
+                               ))
+                           ) : (
+                               <tr>
+                                   <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                                       No devices found matching your filters.
                                    </td>
                                </tr>
-                           ))}
+                           )}
                        </tbody>
                    </table>
                </div>
